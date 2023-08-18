@@ -21,6 +21,7 @@ const (
 
 // MaxNodeID defines the highest node id
 const MaxNodeID uint8 = 0x7F
+const MPDO uint8 = 0x80
 
 const (
 	// MaskCobID is used to get 11 bits from an uint16 for the COB-ID
