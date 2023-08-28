@@ -22,7 +22,8 @@ func (producer Producer) Do(bus *can.Bus) error {
 	defer canopen.Lock.Unlock(key)
 
 	return bus.Publish(can.Frame{
-		ID: uint32(producer.RequestCobID),
+		ID:     uint32(producer.RequestCobID),
+		Length: 8,
 		Data: [8]byte{
 			producer.ReceiveCobID,
 			producer.ObjectIndex.Index.B0, producer.ObjectIndex.Index.B1,
