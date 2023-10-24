@@ -30,4 +30,15 @@ const (
 	MaskNodeID = 0x7F
 	// MaskMessageType is used to extract the 4-bit message type from the COB-ID
 	MaskMessageType = 0x780
+
+	// MaskIDSff is used to extract the valid 11-bit CAN identifier bits from the frame ID of a standard frame format.
+	MaskIDSff = 0x000007FF
+	// MaskIDEff is used to extract the valid 29-bit CAN identifier bits from the frame ID of an extended frame format.
+	MaskIDEff = 0x1FFFFFFF
+	// MaskErr is used to extract the the error flag (0 = data frame, 1 = error message) from the frame ID.
+	MaskErr = 0x20000000
+	// MaskRtr is used to extract the rtr flag (1 = rtr frame) from the frame ID
+	MaskRtr = 0x40000000
+	// MaskEff is used to extract the eff flag (0 = standard frame, 1 = extended frame) from the frame ID
+	MaskEff = 0x80000000
 )

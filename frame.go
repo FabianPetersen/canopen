@@ -19,8 +19,8 @@ type Frame struct {
 func CANopenFrame(frm can.Frame) Frame {
 	canopenFrame := Frame{}
 
-	canopenFrame.CobID = uint16(frm.ID & can.MaskIDSff)
-	canopenFrame.Rtr = (frm.ID & can.MaskRtr) == can.MaskRtr
+	canopenFrame.CobID = uint16(frm.ID & MaskIDSff)
+	canopenFrame.Rtr = (frm.ID & MaskRtr) == MaskRtr
 	canopenFrame.Data = frm.Data[:]
 
 	return canopenFrame
@@ -48,11 +48,11 @@ func (frm Frame) NodeID() uint8 {
 //
 // CANopen frames are encoded as follows:
 //
-//              -------------------------------------------------------
-//     CAN     | ID           | Length    | Flags | Res0 | Res1 | Data |
-//              -------------------------------------------------------
-//     CANopen | COB-ID + Rtr | len(Data) |       |      |      | Data |
-//              -------------------------------------------------------
+//	         -------------------------------------------------------
+//	CAN     | ID           | Length    | Flags | Res0 | Res1 | Data |
+//	         -------------------------------------------------------
+//	CANopen | COB-ID + Rtr | len(Data) |       |      |      | Data |
+//	         -------------------------------------------------------
 func (frm Frame) CANFrame() can.Frame {
 	var data [8]uint8
 	n := len(frm.Data)
@@ -61,7 +61,7 @@ func (frm Frame) CANFrame() can.Frame {
 	// Convert CANopen COB-ID to CAN id including RTR flag
 	id := uint32(frm.CobID)
 	if frm.Rtr == true {
-		id = id | can.MaskRtr
+		id = id | MaskRtr
 	}
 
 	return can.Frame{
