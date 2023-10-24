@@ -2,6 +2,7 @@ github.com/FabianPetersen/can v0.1.6 h1:1e3VQifM0dIi8csWhAZXtMRpZXFyDuftgfNTCpf5
 github.com/FabianPetersen/can v0.1.6/go.mod h1:uT8EmEwshyYzjSRnkGryC5404DsYR8iH0ixWlZXseIs=
 github.com/FabianPetersen/can v0.1.7/go.mod h1:uT8EmEwshyYzjSRnkGryC5404DsYR8iH0ixWlZXseIs=
 github.com/FabianPetersen/can v0.1.8/go.mod h1:kamC/zNbNQByXsg3hsSMPV9J7xRQtu/BYTQepFFXhgQ=
+github.com/FabianPetersen/can v0.1.9/go.mod h1:kamC/zNbNQByXsg3hsSMPV9J7xRQtu/BYTQepFFXhgQ=
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
 github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
