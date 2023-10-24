@@ -1,5 +1,5 @@
-github.com/FabianPetersen/can v0.2.1 h1:pqitN3l1dDVBGQ4sFQ2O3AwNuZ/q1tUAeauiht87wMM=
-github.com/FabianPetersen/can v0.2.1/go.mod h1:kamC/zNbNQByXsg3hsSMPV9J7xRQtu/BYTQepFFXhgQ=
+github.com/FabianPetersen/can v0.2.6 h1:r9TpdQaFlsvlGGyM1FcmdpAZxT35MC8e9yIBlvj8t+A=
+github.com/FabianPetersen/can v0.2.6/go.mod h1:kamC/zNbNQByXsg3hsSMPV9J7xRQtu/BYTQepFFXhgQ=
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
 github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
