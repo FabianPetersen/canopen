@@ -119,7 +119,7 @@ type TransferAbort struct {
 func (e TransferAbort) Error() string {
 	if len(e.AbortCode) == 4 {
 		code := binary.LittleEndian.Uint32(e.AbortCode)
-		return fmt.Sprintf("Server aborted upload with message %s", GetAbortCodeText(code))
+		return GetAbortCodeText(code)
 	}
 
 	return fmt.Sprintf("Server aborted upload")
