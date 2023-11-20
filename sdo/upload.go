@@ -56,8 +56,10 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 	switch scs := frame.Data[0] >> 5; scs {
 	case 2:
 		break
-	case TransferAbort:
-		return nil, canopen.TransferAbort{}
+	case 4: // Abort
+		return nil, canopen.TransferAbort{
+			AbortCode: getAbortCodeBytes(frame),
+		}
 	default:
 		return nil, canopen.UnexpectedSCSResponse{
 			Expected: 2,

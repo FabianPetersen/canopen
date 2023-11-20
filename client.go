@@ -122,7 +122,7 @@ func (e TransferAbort) Error() string {
 		return fmt.Sprintf("Server aborted upload with message %s", GetAbortCodeText(code))
 	}
 
-	return fmt.Sprintf("Server aborted upload: %v", e.AbortCode)
+	return fmt.Sprintf("Server aborted upload")
 }
 
 type UnexpectedSCSResponse struct {
