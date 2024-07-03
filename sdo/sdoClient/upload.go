@@ -1,25 +1,17 @@
-package sdo
+package sdoClient
 
 import (
 	"encoding/binary"
 	"github.com/FabianPetersen/can"
 	"github.com/FabianPetersen/canopen"
+	"github.com/FabianPetersen/canopen/sdo"
 	"strconv"
 
 	"bytes"
 	"time"
 )
 
-const (
-	UploadInitiateRequest  = 0x40 // 0100 0000
-	UploadInitiateResponse = 0x40 // 0100 0000
-
-	UploadSegmentRequest  = 0x60 // 0110 0000
-	UploadSegmentResponse = 0x00 // 0000 0000
-	TransferAbort         = 0x80
-)
-
-// Upload represents a SDO upload process to read data from a CANopen
+// Upload represents an SDO upload process to read data from a CANopen
 // device – upload because the receiving node uploads data to another node.
 type Upload struct {
 	ObjectIndex canopen.ObjectIndex
@@ -39,7 +31,7 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 	frame := canopen.Frame{
 		CobID: upload.RequestCobID,
 		Data: []byte{
-			byte(UploadInitiateRequest),
+			byte(sdo.InitiateUploadRequest << 5),
 			upload.ObjectIndex.Index.B0, upload.ObjectIndex.Index.B1,
 			upload.ObjectIndex.SubIndex,
 			0x0, 0x0, 0x0, 0x0,
@@ -53,29 +45,29 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 	}
 
 	frame = resp.Frame
-	switch scs := frame.Data[0] >> 5; scs {
-	case 2:
-		break
-	case 4: // Abort
-		return nil, canopen.TransferAbort{
-			AbortCode: getAbortCodeBytes(frame),
-		}
-	default:
-		return nil, canopen.UnexpectedSCSResponse{
-			Expected: 2,
-			Actual:   scs,
+	scs := sdo.ServerCommandSpecifier(frame.Data[0] >> 5)
+	if scs != sdo.InitiateUploadResponse {
+		if scs == sdo.AbortTransfer {
+			return nil, canopen.TransferAbort{
+				AbortCode: sdo.GetAbortCodeBytes(frame),
+			}
+		} else {
+			return nil, canopen.UnexpectedSCSResponse{
+				Expected: 2,
+				Actual:   uint8(scs),
+			}
 		}
 	}
 
 	// Check if this is the correct response for the requested message
-	if frame.Data[1] != upload.ObjectIndex.Index.B0 || frame.Data[2] != upload.ObjectIndex.Index.B1 || frame.Data[3] != upload.ObjectIndex.SubIndex {
+	if !upload.ObjectIndex.Compare(frame.ObjectIndex()) {
 		return nil, canopen.TransferAbort{}
 	}
 
-	if hasBit(frame.Data[0], 1) { // e = 1?
+	if sdo.HasBit(frame.Data[0], 1) { // e = 1?
 		// number of segment bytes with no data
 		var n uint8
-		if hasBit(frame.Data[0], 0) { // s = 1?
+		if sdo.HasBit(frame.Data[0], 0) { // s = 1?
 			n = (frame.Data[0] >> 2) & 0x3
 		}
 		return frame.Data[4 : 8-n], nil
@@ -94,11 +86,11 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 		data := make([]byte, 8)
 
 		// ccs = 3
-		data[0] = UploadSegmentRequest
+		data[0] = byte(sdo.UploadSegmentRequest << 5)
 
 		if i%2 == 1 {
 			// t = 1
-			data[0] = setBit(data[0], 4)
+			data[0] = sdo.SetBit(data[0], 4)
 		}
 
 		i += 1
@@ -114,10 +106,10 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 			return nil, err
 		}
 
-		if hasBit(frame.Data[0], 4) != hasBit(resp.Frame.Data[0], 4) {
+		if sdo.HasBit(frame.Data[0], 4) != sdo.HasBit(resp.Frame.Data[0], 4) {
 			return nil, canopen.UnexpectedToggleBit{
-				Expected: hasBit(frame.Data[0], 4),
-				Actual:   hasBit(resp.Frame.Data[0], 4),
+				Expected: sdo.HasBit(frame.Data[0], 4),
+				Actual:   sdo.HasBit(resp.Frame.Data[0], 4),
 			}
 		}
 
@@ -132,7 +124,7 @@ func (upload Upload) Do(bus *can.Bus) ([]byte, error) {
 			}
 		}
 
-		if hasBit(resp.Frame.Data[0], 0) { // c = 1?
+		if sdo.HasBit(resp.Frame.Data[0], 0) { // c = 1?
 			// Check if we have received too few bytes
 			if buf.Len() != int(total) {
 				return nil, canopen.UnexpectedResponseLength{

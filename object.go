@@ -22,3 +22,19 @@ func NewObjectIndex(index uint16, subIndex uint8) ObjectIndex {
 		SubIndex: subIndex,
 	}
 }
+
+func (objectIndex *ObjectIndex) Compare(other ObjectIndex) bool {
+	return objectIndex.Index.B0 == other.Index.B0 && objectIndex.Index.B1 == other.Index.B1 && objectIndex.SubIndex == other.SubIndex
+}
+
+func (objectIndex *ObjectIndex) Bytes() []byte {
+	return []byte{
+		objectIndex.Index.B0,
+		objectIndex.Index.B1,
+		objectIndex.SubIndex,
+	}
+}
+
+func (index *Index) Index() uint16 {
+	return uint16(index.B0) + (uint16(index.B1) << 8)
+}

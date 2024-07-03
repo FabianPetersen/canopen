@@ -6,6 +6,7 @@ require (
 	github.com/FabianPetersen/can v0.2.7
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/jpillora/maplock v0.0.0-20160420012925-5c725ac6e22a
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 )
 
 require (

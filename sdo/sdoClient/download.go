@@ -1,10 +1,11 @@
-package sdo
+package sdoClient
 
 import (
 	"bytes"
 	"encoding/binary"
 	"github.com/FabianPetersen/can"
 	"github.com/FabianPetersen/canopen"
+	"github.com/FabianPetersen/canopen/sdo"
 	"github.com/avast/retry-go"
 	"strconv"
 	"time"
@@ -78,22 +79,22 @@ func (download Download) doInitFrame(bus *can.Bus, isBlockTransfer bool) (error,
 	scs := frame.Data[0] >> 5
 	if !isBlockTransfer && scs == 3 || isBlockTransfer && scs == 5 { // Success
 		// Check if this is the correct response for the requested message
-		if frame.Data[1] != download.ObjectIndex.Index.B0 || frame.Data[2] != download.ObjectIndex.Index.B1 || frame.Data[3] != download.ObjectIndex.SubIndex {
+		if !download.ObjectIndex.Compare(frame.ObjectIndex()) {
 			return canopen.TransferAbort{
-				AbortCode: getAbortCodeBytes(frame),
+				AbortCode: sdo.GetAbortCodeBytes(frame),
 			}, segmentsPerBlock
 		}
 
 	} else if scs == 4 { // Abort
 		return canopen.TransferAbort{
-			AbortCode: getAbortCodeBytes(frame),
+			AbortCode: sdo.GetAbortCodeBytes(frame),
 		}, segmentsPerBlock
 
 	} else {
 		return canopen.UnexpectedSCSResponse{
 			Expected:  3,
 			Actual:    scs,
-			AbortCode: getAbortCodeBytes(frame),
+			AbortCode: sdo.GetAbortCodeBytes(frame),
 		}, segmentsPerBlock
 	}
 
@@ -104,48 +105,38 @@ func (download Download) doInitFrame(bus *can.Bus, isBlockTransfer bool) (error,
 // If the download data is less than 4 bytes, the init frame data contains all download data.
 // If the download data is more than 4 bytes, the init frame data contains the overall length of the download data.
 func (download Download) initFrame(isBlockTransfer bool) (frame canopen.Frame, err error) {
-	fdata := make([]byte, 4)
 
+	// css = 1 (download init request)
+	var headerByte = byte(sdo.InitiateDownloadRequest << 5)
 	if isBlockTransfer {
 		// css = 6 (download init block request)
-		fdata[0] = setBit(fdata[0], 6)
-		fdata[0] = setBit(fdata[0], 7)
-	} else {
-		// css = 1 (download init request)
-		fdata[0] = setBit(fdata[0], 5)
+		headerByte = byte(sdo.ClientBlockDownload << 5)
 	}
 
-	fdata[1] = download.ObjectIndex.Index.B0
-	fdata[2] = download.ObjectIndex.Index.B1
-	fdata[3] = download.ObjectIndex.SubIndex
+	fdata := append([]byte{headerByte}, download.ObjectIndex.Bytes()...)
 
 	n := len(download.Data)
 	if n <= 4 && !isBlockTransfer { // does download data fit into one frame?
 		// e = 1 (expedited)
-		fdata[0] = setBit(fdata[0], 1)
+		fdata[0] = sdo.SetBit(fdata[0], 1)
 		// s = 1
-		fdata[0] = setBit(fdata[0], 0)
+		fdata[0] = sdo.SetBit(fdata[0], 0)
 
 		// n = number of unused bytes in frame.Data
-		emptyBytes := 4 - n
-		if emptyBytes == 2 || emptyBytes == 3 {
-			fdata[0] = setBit(fdata[0], 3)
-		}
-		if emptyBytes == 1 || emptyBytes == 3 {
-			fdata[0] = setBit(fdata[0], 2)
-		}
+		n := byte(4 - n)
+		fdata[0] += n << 2
 
 		// copy all download data into frame data
 		fdata = append(fdata, download.Data...)
 	} else {
 		if isBlockTransfer {
 			// Always indicate size in block transfer
-			fdata[0] = setBit(fdata[0], 1)
+			fdata[0] = sdo.SetBit(fdata[0], 1)
 		} else {
 			// e = 0
 			// n = 0 (frame.Data contains the overall )
 			// s = 1
-			fdata[0] = setBit(fdata[0], 0)
+			fdata[0] = sdo.SetBit(fdata[0], 0)
 		}
 
 		var buf bytes.Buffer
@@ -158,12 +149,8 @@ func (download Download) initFrame(isBlockTransfer bool) (frame canopen.Frame, e
 	}
 
 	// CiA301 Standard expects all (8) bytes to be sent
-	for len(fdata) < 8 {
-		fdata = append(fdata, 0x0)
-	}
-
+	frame.Data = sdo.Pad(fdata, 8)
 	frame.CobID = download.RequestCobID
-	frame.Data = fdata
 
 	return
 }
@@ -200,10 +187,10 @@ func (download Download) doBlock(bus *can.Bus, segmentsPerBlock int) error {
 		}
 
 		// Mask out the correct bits
-		scs := resp.Frame.Data[0] >> 5
+		scs := sdo.ServerCommandSpecifier(resp.Frame.Data[0] >> 5)
 		ss := resp.Frame.Data[0] & 0x3
 
-		if scs == 5 && ss == 2 {
+		if scs == sdo.ServerBlockDownload && ss == 2 {
 			segmentsPerBlock = int(resp.Frame.Data[2])
 			ackSegment := int(resp.Frame.Data[1])
 
@@ -219,8 +206,8 @@ func (download Download) doBlock(bus *can.Bus, segmentsPerBlock int) error {
 		} else {
 			return canopen.UnexpectedSCSResponse{
 				Expected:  5,
-				Actual:    scs,
-				AbortCode: getAbortCodeBytes(resp.Frame),
+				Actual:    uint8(scs),
+				AbortCode: sdo.GetAbortCodeBytes(resp.Frame),
 			}
 		}
 	}
@@ -237,15 +224,14 @@ func (download Download) doBlock(bus *can.Bus, segmentsPerBlock int) error {
 func (download Download) doBlockEnd(c *canopen.Client) error {
 	fdata := make([]byte, 8)
 
+	// css = 6 (download init block request)
+	fdata[0] = byte(sdo.ClientBlockDownload << 5)
+
 	// n (Set the length of data in the last frame in the last segment)
 	fdata[0] |= uint8(7-(len(download.Data)%7)) << 2
 
-	// css = 6 (download init block request)
-	fdata[0] = setBit(fdata[0], 6)
-	fdata[0] = setBit(fdata[0], 7)
-
 	// cs = 1 (indicate download end)
-	fdata[0] = setBit(fdata[0], 0)
+	fdata[0] = sdo.SetBit(fdata[0], 0)
 
 	req := canopen.NewRequest(canopen.NewFrame(download.RequestCobID, fdata), uint32(download.ResponseCobID))
 	resp, err := c.DoMinDuration(req, 0)
@@ -254,18 +240,18 @@ func (download Download) doBlockEnd(c *canopen.Client) error {
 		return err
 	}
 
-	scs := resp.Frame.Data[0] >> 5
-	ss := hasBit(resp.Frame.Data[0], 0)
+	scs := sdo.ServerCommandSpecifier(resp.Frame.Data[0] >> 5)
+	ss := sdo.HasBit(resp.Frame.Data[0], 0)
 
-	if scs == 5 && ss {
-		return nil
-	} else {
+	if scs != sdo.ServerBlockDownload || !ss {
 		return canopen.UnexpectedSCSResponse{
 			Expected:  5,
-			Actual:    scs,
-			AbortCode: getAbortCodeBytes(resp.Frame),
+			Actual:    uint8(scs),
+			AbortCode: sdo.GetAbortCodeBytes(resp.Frame),
 		}
 	}
+
+	return nil
 }
 
 func (download Download) doSegments(bus *can.Bus) error {
@@ -279,27 +265,27 @@ func (download Download) doSegments(bus *can.Bus) error {
 			return err
 		}
 
-		switch scs := resp.Frame.Data[0] >> 5; scs {
-		case 1:
-			break
-		case 4:
-			return canopen.TransferAbort{
-				AbortCode: getAbortCodeBytes(resp.Frame),
-			}
-		default:
-			return canopen.UnexpectedSCSResponse{
-				Expected:  1,
-				Actual:    scs,
-				AbortCode: getAbortCodeBytes(resp.Frame),
+		scs := sdo.ServerCommandSpecifier(resp.Frame.Data[0] >> 5)
+		if scs != sdo.DownloadSegmentResponse {
+			if scs == sdo.AbortTransfer {
+				return canopen.TransferAbort{
+					AbortCode: sdo.GetAbortCodeBytes(resp.Frame),
+				}
+			} else {
+				return canopen.UnexpectedSCSResponse{
+					Expected:  1,
+					Actual:    uint8(scs),
+					AbortCode: sdo.GetAbortCodeBytes(resp.Frame),
+				}
 			}
 		}
 
 		// check toggle bit
-		if hasBit(frame.Data[0], 4) != hasBit(resp.Frame.Data[0], 4) {
+		if sdo.HasBit(frame.Data[0], 4) != sdo.HasBit(resp.Frame.Data[0], 4) {
 			return canopen.UnexpectedToggleBit{
-				Expected:  hasBit(frame.Data[0], 4),
-				Actual:    hasBit(resp.Frame.Data[0], 4),
-				AbortCode: getAbortCodeBytes(resp.Frame),
+				Expected:  sdo.HasBit(frame.Data[0], 4),
+				Actual:    sdo.HasBit(resp.Frame.Data[0], 4),
+				AbortCode: sdo.GetAbortCodeBytes(resp.Frame),
 			}
 		}
 	}
@@ -312,7 +298,7 @@ func (download Download) segmentFrames(isBlockTransfer bool) (frames []canopen.F
 		return
 	}
 
-	junks := splitN(download.Data, 7)
+	junks := sdo.SplitN(download.Data, 7)
 	for i, junk := range junks {
 		fdata := append([]byte{getFirstByte(i, i == len(junks)-1, len(junk), isBlockTransfer)}, junk...)
 
@@ -339,7 +325,7 @@ func getFirstByte(i int, isLast bool, junkLength int, isBlockTransfer bool) byte
 
 		if i%2 == 1 {
 			// toggle bit 5
-			firstByte = setBit(firstByte, 4)
+			firstByte = sdo.SetBit(firstByte, 4)
 		}
 	} else {
 		// Set the segment number
@@ -349,9 +335,9 @@ func getFirstByte(i int, isLast bool, junkLength int, isBlockTransfer bool) byte
 	if isLast {
 		// c = 1 (no more segments to download)
 		if isBlockTransfer {
-			firstByte = setBit(firstByte, 7)
+			firstByte = sdo.SetBit(firstByte, 7)
 		} else {
-			firstByte = setBit(firstByte, 0)
+			firstByte = sdo.SetBit(firstByte, 0)
 		}
 	}
 

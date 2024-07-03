@@ -46,7 +46,7 @@ func main() {
 	bus.ConnectAndPublish()
 }
 
-// logCANFrame logs a frame with the same format as candump from can-utils.
+// logCANFrame logs a frame with the same format as candump from can-canopen.
 func logCANFrame(frm can.Frame) {
 	canopenFrm := canopen.CANopenFrame(frm)
 	var msgType string

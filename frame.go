@@ -71,22 +71,16 @@ func (frm Frame) CANFrame() can.Frame {
 	}
 }
 
-// Marshal returns the byte encoding of frm.
-func Marshal(frm Frame) (b []byte, err error) {
-	canFrm := frm.CANFrame()
-
-	return can.Marshal(canFrm)
-}
-
-// Unmarshal parses the bytes b and stores the result in the value
-// pointed to by frm.
-func Unmarshal(b []byte, frm *Frame) error {
-	canFrm := can.Frame{}
-	if err := can.Unmarshal(b, &canFrm); err != nil {
-		return err
+func (frm *Frame) ObjectIndex() ObjectIndex {
+	if len(frm.Data) < 4 {
+		return ObjectIndex{}
 	}
 
-	*frm = CANopenFrame(canFrm)
-
-	return nil
+	return ObjectIndex{
+		Index: Index{
+			B0: frm.Data[1],
+			B1: frm.Data[2],
+		},
+		SubIndex: frm.Data[3],
+	}
 }
