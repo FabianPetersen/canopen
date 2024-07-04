@@ -30,7 +30,7 @@ func (server *Server) expeditedDownload(frame canopen.Frame) {
 
 	// Accept the download request
 	if downloadError == canopen.NO_ERROR {
-		_ = server.publish([]byte{sdo.ServerResponseByte(sdo.InitiateDownloadResponse, false)})
+		_ = server.publish(append([]byte{sdo.ServerResponseByte(sdo.InitiateDownloadResponse, false)}, objectIndex.Bytes()...))
 	} else {
 		server.publishError(downloadError, objectIndex)
 	}
@@ -44,7 +44,7 @@ func (server *Server) ordinaryDownload(frame canopen.Frame) {
 	size := binary.LittleEndian.Uint32(frame.Data[4:])
 
 	// Accept the request, to get the actual data from the client
-	resp, err := server.publishAndWait([]byte{sdo.ServerResponseByte(sdo.InitiateDownloadResponse, false)})
+	resp, err := server.publishAndWait(append([]byte{sdo.ServerResponseByte(sdo.InitiateDownloadResponse, false)}, objectIndex.Bytes()...))
 	if err != nil {
 		// The client did not respond in time
 		// TODO abort the request
@@ -76,7 +76,7 @@ func (server *Server) ordinaryDownload(frame canopen.Frame) {
 
 			if !noContinueBit {
 				// Request the next part
-				resp, err = server.publishAndWait([]byte{sdo.ServerResponseByte(sdo.DownloadSegmentResponse, toggleBit)})
+				resp, err = server.publishAndWait(append([]byte{sdo.ServerResponseByte(sdo.DownloadSegmentResponse, toggleBit)}, objectIndex.Bytes()...))
 				if err != nil {
 					// Abort the request (no response)
 					server.publishError(canopen.SDO_ERR_TIMEOUT, objectIndex)

@@ -63,7 +63,7 @@ func TestExpeditedDownload(t *testing.T) {
 	// Send the request
 	sentData := []byte{0, 1, 2, 3}
 	clientErr := sdoClient.Download{
-		ObjectIndex:   canopen.ObjectIndex{},
+		ObjectIndex:   canopen.NewObjectIndex(0x1005, 4),
 		Data:          sentData,
 		RequestCobID:  canopen.MessageTypeRSDO + 1,
 		ResponseCobID: canopen.MessageTypeTSDO + 1,
@@ -90,7 +90,7 @@ func TestDownload(t *testing.T) {
 	// Send the request
 	sentData := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	clientErr := sdoClient.Download{
-		ObjectIndex:   canopen.ObjectIndex{},
+		ObjectIndex:   canopen.NewObjectIndex(0x1005, 4),
 		Data:          sentData,
 		RequestCobID:  canopen.MessageTypeRSDO + 1,
 		ResponseCobID: canopen.MessageTypeTSDO + 1,
@@ -118,7 +118,7 @@ func TestExpeditedUpload(t *testing.T) {
 
 	// Send the request
 	receivedData, clientErr := sdoClient.Upload{
-		ObjectIndex:   canopen.ObjectIndex{},
+		ObjectIndex:   canopen.NewObjectIndex(0x1005, 4),
 		RequestCobID:  canopen.MessageTypeRSDO + 1,
 		ResponseCobID: canopen.MessageTypeTSDO + 1,
 	}.Do(getBus())
@@ -144,7 +144,7 @@ func TestUpload(t *testing.T) {
 
 	// Send the request
 	receivedData, clientErr := sdoClient.Upload{
-		ObjectIndex:   canopen.ObjectIndex{},
+		ObjectIndex:   canopen.NewObjectIndex(0x1005, 4),
 		RequestCobID:  canopen.MessageTypeRSDO + 1,
 		ResponseCobID: canopen.MessageTypeTSDO + 1,
 	}.Do(getBus())
