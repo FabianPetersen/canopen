@@ -1,6 +1,9 @@
 package canopen
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Index represents the 2-byte index in an object index.
 type Index struct {
@@ -31,7 +34,7 @@ func (objectIndex *ObjectIndex) Compare(other ObjectIndex) bool {
 
 func (objectIndex *ObjectIndex) String() string {
 	index := uint16(objectIndex.Index.B0) + (uint16(objectIndex.Index.B1) << 8)
-	return fmt.Sprintf("%x:%d", index, objectIndex.SubIndex)
+	return strings.ToUpper(fmt.Sprintf("%x:%d", index, objectIndex.SubIndex))
 }
 
 func (objectIndex *ObjectIndex) Bytes() []byte {
